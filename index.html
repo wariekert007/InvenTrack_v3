@@ -1,0 +1,1444 @@
+<!doctype html>
+<html lang="af">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>InvenTrack</title>
+<style>
+  :root {
+    --bg: #f4f5f7; --kaart: #ffffff; --teks: #1d2330; --sag: #5b6475; --rand: #d9dde5;
+    --hoof: #1f6f5c; --hoof-teks: #ffffff;
+    --fout: #b42318; --fout-bg: #fdecea; --waarsku: #8a5a00; --waarsku-bg: #fff6e0;
+    --sukses: #1f6f3c; --sukses-bg: #e6f4ea;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12151b; --kaart: #1b2029; --teks: #e8ebf1; --sag: #9aa3b2; --rand: #2c3340;
+      --hoof: #3fae8f; --hoof-teks: #0d1512;
+      --fout: #ff8a80; --fout-bg: #3a1d1d; --waarsku: #f5c96b; --waarsku-bg: #3a2f14;
+      --sukses: #8fd6a8; --sukses-bg: #183323;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; padding: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--teks);
+  }
+  .kaart {
+    width: 100%; max-width: 400px; padding: 28px 24px;
+    background: var(--kaart); border: 1px solid var(--rand); border-radius: 14px;
+  }
+  h1 { font-size: 1.4rem; margin: 0 0 4px; }
+  .sub { color: var(--sag); margin: 0 0 22px; font-size: .95rem; }
+  .wenk { color: var(--sag); font-size: .8rem; margin: 6px 0 0; }
+  label { display: block; font-size: .85rem; font-weight: 600; margin: 14px 0 6px; }
+  input {
+    width: 100%; padding: 12px; font-size: 1rem;
+    border: 1px solid var(--rand); border-radius: 8px;
+    background: var(--bg); color: var(--teks);
+  }
+  select {
+    width: 100%; padding: 12px; font-size: 1rem;
+    border: 1px solid var(--rand); border-radius: 8px;
+    background: var(--bg); color: var(--teks);
+  }
+  input:focus, select:focus { outline: 2px solid var(--hoof); outline-offset: 1px; }
+  #kode { text-transform: uppercase; letter-spacing: .15em; }
+  button {
+    width: 100%; margin-top: 22px; padding: 13px; font-size: 1rem; font-weight: 600;
+    border: 0; border-radius: 8px; background: var(--hoof); color: var(--hoof-teks); cursor: pointer;
+  }
+  button:disabled { opacity: .6; cursor: wait; }
+  button.tweede { background: transparent; color: var(--teks); border: 1px solid var(--rand); }
+  .boodskap { display: none; margin-top: 16px; padding: 10px 12px; border-radius: 8px; font-size: .9rem; }
+  .boodskap.fout { display: block; background: var(--fout-bg); color: var(--fout); }
+  .boodskap.waarsku { display: block; background: var(--waarsku-bg); color: var(--waarsku); }
+  .boodskap.sukses { display: block; background: var(--sukses-bg); color: var(--sukses); }
+  .ry { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--rand); font-size: .95rem; }
+  .ry span:first-child { color: var(--sag); }
+  [hidden] { display: none !important; }
+
+  .stappe { display: flex; gap: 6px; margin-bottom: 18px; }
+  .stappe span { flex: 1; height: 4px; border-radius: 2px; background: var(--rand); }
+  .stappe span.aan { background: var(--hoof); }
+
+  .logokop { display: block; max-width: 160px; max-height: 80px; margin: 0 0 14px; object-fit: contain; }
+  .logovak {
+    display: flex; align-items: center; justify-content: center; min-height: 120px;
+    border: 2px dashed var(--rand); border-radius: 10px; padding: 12px; cursor: pointer;
+    color: var(--sag); font-size: .9rem; text-align: center; background: var(--bg);
+  }
+  .logovak:focus-within { outline: 2px solid var(--hoof); outline-offset: 1px; }
+  .logovak img { max-width: 100%; max-height: 120px; object-fit: contain; }
+  .logovak input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+
+  #leser { width: 100%; min-height: 200px; margin-top: 4px; border-radius: 10px; overflow: hidden; background: #000; }
+  #leser video { width: 100% !important; display: block; }
+  .tussen { display: flex; align-items: center; gap: 10px; margin: 18px 0 2px; color: var(--sag); font-size: .8rem; }
+  .tussen::before, .tussen::after { content: ""; flex: 1; border-top: 1px solid var(--rand); }
+  .handvorm { display: flex; gap: 8px; }
+  .handvorm button { width: auto; margin-top: 0; padding: 12px 16px; }
+  .resultaat { margin-top: 16px; padding: 14px; border: 1px solid var(--rand); border-radius: 10px; }
+  .resultaat h2 { font-size: 1.05rem; margin: 0 0 6px; }
+  .resultaat .ry:last-child { border-bottom: 0; }
+  .etiket { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: .75rem; font-weight: 600; background: var(--hoof); color: var(--hoof-teks); }
+  .knoppe { display: flex; gap: 10px; }
+  .knoppe button { margin-top: 16px; }
+
+  /* Eienaar-paneel */
+  .kaart.wyd { max-width: 720px; }
+  .paneelkop { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 22px; }
+  .paneelkop h2 { font-size: 1.1rem; margin: 0; }
+  button.klein { width: auto; margin-top: 0; padding: 8px 12px; font-size: .85rem; }
+  button.gevaar { background: var(--fout); color: #fff; }
+  .bes { border: 1px solid var(--rand); border-radius: 10px; padding: 14px; margin-top: 12px; }
+  .bes.af { opacity: .75; }
+  .bes-kop { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .bes-kop strong { font-size: 1rem; overflow-wrap: anywhere; }
+  .bes-info { color: var(--sag); font-size: .85rem; margin-top: 4px; overflow-wrap: anywhere; }
+  .bes-knoppe { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .bes-verwyder { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--rand); font-size: .9rem; }
+  .bes-verwyder p { margin: 0 0 8px; }
+  .bes-verwyder .handvorm input { padding: 8px; }
+  .status { flex: none; padding: 2px 8px; border-radius: 99px; font-size: .75rem; font-weight: 600; }
+  .status.aan { background: var(--sukses-bg); color: var(--sukses); }
+  .status.af { background: var(--fout-bg); color: var(--fout); }
+  .leeg { color: var(--sag); font-size: .9rem; margin-top: 12px; }
+
+  /* Admin-skerms */
+  .menu { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 22px; }
+  .menu button { margin-top: 0; padding: 16px 8px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .menu button svg { width: 24px; height: 24px; }
+  .skermkop { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
+  .skermkop h1 { margin: 0; }
+  .terug { width: auto; margin: 0 0 14px; padding: 6px 10px; font-size: .85rem; font-weight: 600;
+           background: transparent; color: var(--sag); border: 1px solid var(--rand); }
+  .werkbalk { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 14px 0 4px; flex-wrap: wrap; }
+  .werkbalk label { display: flex; align-items: center; gap: 6px; margin: 0; font-weight: 400; color: var(--sag); }
+  .werkbalk input[type=checkbox] { width: auto; }
+  .vorm { margin-top: 14px; padding: 16px; border: 1px solid var(--hoof); border-radius: 10px; background: var(--bg); }
+  .vorm h2 { font-size: 1.05rem; margin: 0 0 4px; }
+  .vorm input, .vorm select { background: var(--kaart); }
+  .vorm .knoppe button { margin-top: 18px; }
+  .twee { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+  @media (max-width: 520px) { .twee { grid-template-columns: 1fr; } }
+  .groepkop { margin: 22px 0 4px; font-size: .8rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--sag); }
+  .item { display: flex; justify-content: space-between; align-items: center; gap: 10px;
+          padding: 10px 0; border-bottom: 1px solid var(--rand); }
+  .item.af { opacity: .55; }
+  .item .teks { min-width: 0; flex: 1; }
+  .item .naam { font-weight: 600; overflow-wrap: anywhere; }
+  .item .fyn { color: var(--sag); font-size: .82rem; margin-top: 2px; overflow-wrap: anywhere; }
+  .item .fyn.let { color: var(--waarsku); }
+  .item .aksies { display: flex; gap: 6px; flex: none; flex-wrap: wrap; justify-content: flex-end; }
+  .ingekeep { border-left: 2px solid var(--rand); padding-left: 12px; }
+  @media (max-width: 560px) {
+    .item { flex-direction: column; align-items: stretch; gap: 8px; }
+    .item .aksies { justify-content: flex-start; }
+    .ingekeep { padding-left: 10px; }
+  }
+  .merk { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 99px; font-size: .7rem; font-weight: 600;
+          vertical-align: 2px; background: var(--rand); color: var(--teks); }
+  .merk.hoof { background: var(--hoof); color: var(--hoof-teks); }
+  .merk.af { background: var(--fout-bg); color: var(--fout); }
+  .kopieervak { margin-top: 14px; padding: 14px; border: 1px solid var(--rand); border-radius: 10px; }
+  .kopieervak textarea { width: 100%; height: 190px; padding: 10px; font: .85rem/1.4 ui-monospace, Consolas, monospace;
+                         border: 1px solid var(--rand); border-radius: 8px; background: var(--bg); color: var(--teks); resize: vertical; }
+  .kopieervak p { margin: 0 0 8px; font-size: .9rem; }
+</style>
+</head>
+<body>
+<main class="kaart">
+
+  <!-- ============ AANMELD ============ -->
+  <section id="aanmeldSkerm">
+    <h1>InvenTrack</h1>
+    <p class="sub">Meld aan om voort te gaan</p>
+    <form id="aanmeldVorm" novalidate>
+      <label for="kode">Besigheidskode</label>
+      <input id="kode" autocomplete="organization" autocapitalize="characters" spellcheck="false">
+      <label for="gebruiker">Gebruikersnaam</label>
+      <input id="gebruiker" autocomplete="username" autocapitalize="off" spellcheck="false">
+      <label for="wagwoord">Wagwoord</label>
+      <input id="wagwoord" type="password" autocomplete="current-password">
+      <button id="aanmeldKnop" type="submit">Meld aan</button>
+      <div id="aanmeldBoodskap" class="boodskap"></div>
+    </form>
+  </section>
+
+  <!-- ============ NUWE WAGWOORD ============ -->
+  <section id="wagwoordSkerm" hidden>
+    <div class="stappe" id="wagwoordStappe"><span class="aan"></span><span></span></div>
+    <h1>Kies ’n nuwe wagwoord</h1>
+    <p class="sub">Jy het met ’n tydelike wagwoord aangemeld. Kies nou jou eie.</p>
+    <form id="wagwoordVorm" novalidate>
+      <label for="huidigeWW">Tydelike (huidige) wagwoord</label>
+      <input id="huidigeWW" type="password" autocomplete="current-password">
+      <label for="nuweWW">Nuwe wagwoord</label>
+      <input id="nuweWW" type="password" autocomplete="new-password">
+      <p class="wenk">Minstens 8 karakters, met letters én syfers.</p>
+      <label for="bevestigWW">Herhaal nuwe wagwoord</label>
+      <input id="bevestigWW" type="password" autocomplete="new-password">
+      <button id="wagwoordKnop" type="submit">Stoor wagwoord</button>
+      <div id="wagwoordBoodskap" class="boodskap"></div>
+    </form>
+    <button class="tweede afmeld" type="button">Meld af</button>
+  </section>
+
+  <!-- ============ BESIGHEID OPSTEL (admin, eerste keer) ============ -->
+  <section id="opstelSkerm" hidden>
+    <div class="stappe"><span class="aan"></span><span class="aan"></span></div>
+    <h1>Stel jou besigheid op</h1>
+    <p class="sub">Kontroleer die besonderhede. Dit verskyn op al julle verslae.</p>
+    <form id="opstelVorm" novalidate>
+      <label for="besNaam">Besigheidsnaam</label>
+      <input id="besNaam" autocomplete="organization">
+      <p class="wenk">Is dit reg gespel? Korrigeer dit hier indien nie.</p>
+
+      <label for="adminNaam">Jou volle naam</label>
+      <input id="adminNaam" autocomplete="name">
+
+      <label for="logoLeer">Logo</label>
+      <label class="logovak" id="logoVak">
+        <input id="logoLeer" type="file" accept="image/png,image/jpeg">
+        <span id="logoTeks">Tik om ’n logo te kies (PNG of JPG)</span>
+        <img id="logoVoorskou" alt="Logo-voorskou" hidden>
+      </label>
+
+      <button id="opstelKnop" type="submit">Voltooi opstelling</button>
+      <div id="opstelBoodskap" class="boodskap"></div>
+    </form>
+    <button class="tweede afmeld" type="button">Meld af</button>
+  </section>
+
+  <!-- ============ TUIS ============ -->
+  <section id="tuisSkerm" hidden>
+    <img id="tuisLogo" class="logokop" alt="" hidden>
+    <h1 id="welkom">Welkom</h1>
+    <p class="sub" id="besigheidNaam"></p>
+    <div class="ry"><span>Rol</span><span id="rol"></span></div>
+    <div class="ry"><span>Besigheidskode</span><span id="tuisKode"></span></div>
+    <div id="tuisBoodskap" class="boodskap"></div>
+
+    <div id="superPaneel" hidden>
+      <div class="paneelkop">
+        <h2>Besighede</h2>
+        <button id="herlaaiKnop" class="klein tweede" type="button">Herlaai</button>
+      </div>
+      <div id="superBoodskap" class="boodskap"></div>
+      <div id="besighedeLys"></div>
+    </div>
+
+    <div id="adminMenu" class="menu" hidden>
+      <button id="lokaleKnop" class="tweede" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6"/></svg>
+        Lokale
+      </button>
+      <button id="kategorieKnop" class="tweede" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 7l9-4 9 4-9 4-9-4zM3 12l9 4 9-4M3 17l9 4 9-4"/></svg>
+        Kategorieë
+      </button>
+      <button id="gebruikersKnop" class="tweede" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M1 21c0-4 4-6 8-6s8 2 8 6M17 4a4 4 0 010 8M23 21c0-3-2-5-5-5.7"/></svg>
+        Gebruikers
+      </button>
+    </div>
+
+    <button id="skandeerKnop" type="button">Skandeer kode</button>
+    <button class="tweede afmeld" type="button">Meld af</button>
+  </section>
+
+  <!-- ============ LOKALE ============ -->
+  <section id="lokaleSkerm" hidden>
+    <button class="terug" type="button">← Terug</button>
+    <div class="skermkop">
+      <h1>Lokale</h1>
+      <button id="lkNuweKnop" class="klein" type="button">+ Nuwe</button>
+    </div>
+    <p class="sub" style="margin-bottom:0">Terreine, geboue, lokale en stoorkamers. Elke lokaal het ’n hoof en ’n kontroleerder.</p>
+    <div id="lokaleBoodskap" class="boodskap"></div>
+
+    <form id="lkVorm" class="vorm" novalidate hidden>
+      <h2 id="lkTitel">Nuwe lokaal</h2>
+      <div class="twee">
+        <div>
+          <label for="lkNaam">Naam</label>
+          <input id="lkNaam" maxlength="80" placeholder="bv. A12 of Wetenskaplab">
+        </div>
+        <div>
+          <label for="lkTipe">Tipe</label>
+          <select id="lkTipe">
+            <option value="Lokaal">Lokaal</option>
+            <option value="Stoorkamer">Stoorkamer</option>
+            <option value="Gebou">Gebou</option>
+            <option value="Terrein">Terrein</option>
+          </select>
+        </div>
+      </div>
+      <div id="lkOuerVak">
+        <label for="lkOuer">Is in</label>
+        <select id="lkOuer"></select>
+        <p class="wenk" id="lkOuerWenk"></p>
+      </div>
+      <div id="lkMenseVak" class="twee">
+        <div>
+          <label for="lkHoof">Hoof van lokaal</label>
+          <select id="lkHoof"></select>
+        </div>
+        <div>
+          <label for="lkKontr">Kontroleerder</label>
+          <select id="lkKontr"></select>
+        </div>
+      </div>
+      <div class="knoppe">
+        <button id="lkStoor" type="submit">Stoor</button>
+        <button id="lkKanselleer" class="tweede" type="button">Kanselleer</button>
+      </div>
+      <div id="lkFout" class="boodskap"></div>
+    </form>
+
+    <div class="werkbalk">
+      <span id="lokaleTelling" class="wenk"></span>
+      <label><input id="lokaleWysAf" type="checkbox"> Wys onaktiewe</label>
+    </div>
+    <div id="lokaleLys"></div>
+  </section>
+
+  <!-- ============ KATEGORIEË ============ -->
+  <section id="kategorieSkerm" hidden>
+    <button class="terug" type="button">← Terug</button>
+    <div class="skermkop">
+      <h1>Kategorieë</h1>
+      <button id="ktNuweKnop" class="klein" type="button">+ Nuwe</button>
+    </div>
+    <p class="sub" style="margin-bottom:0">Hoofkategorieë met subkategorieë, verdeel in bates en verbruikbare items.</p>
+    <div id="kategorieBoodskap" class="boodskap"></div>
+
+    <form id="ktVorm" class="vorm" novalidate hidden>
+      <h2 id="ktTitel">Nuwe kategorie</h2>
+      <label for="ktNaam">Naam</label>
+      <input id="ktNaam" maxlength="60" placeholder="bv. Meubels of Skryfbehoeftes">
+      <label for="ktOuer">Hoofkategorie</label>
+      <select id="ktOuer"></select>
+      <p class="wenk" id="ktOuerWenk">Kies ’n hoofkategorie om dit ’n subkategorie te maak.</p>
+      <div id="ktSoortVak">
+        <label for="ktSoort">Soort</label>
+        <select id="ktSoort">
+          <option value="">— Kies —</option>
+          <option value="Bate">Bates (individuele items met batenommer)</option>
+          <option value="Verbruikbaar">Verbruikbare items (hoeveelhede)</option>
+        </select>
+      </div>
+      <div class="knoppe">
+        <button id="ktStoor" type="submit">Stoor</button>
+        <button id="ktKanselleer" class="tweede" type="button">Kanselleer</button>
+      </div>
+      <div id="ktFout" class="boodskap"></div>
+    </form>
+
+    <div class="werkbalk">
+      <span id="kategorieTelling" class="wenk"></span>
+      <label><input id="kategorieWysAf" type="checkbox"> Wys onaktiewe</label>
+    </div>
+    <div id="kategorieLys"></div>
+  </section>
+
+  <!-- ============ GEBRUIKERS ============ -->
+  <section id="gebruikersSkerm" hidden>
+    <button class="terug" type="button">← Terug</button>
+    <div class="skermkop">
+      <h1>Gebruikers</h1>
+      <button id="gbNuweKnop" class="klein" type="button">+ Nuwe</button>
+    </div>
+    <p class="sub" style="margin-bottom:0">Mense wat by hierdie besigheid kan aanmeld.</p>
+    <div id="gebruikersBoodskap" class="boodskap"></div>
+
+    <form id="gbVorm" class="vorm" novalidate hidden>
+      <h2 id="gbTitel">Nuwe gebruiker</h2>
+      <label for="gbNaam">Volle naam</label>
+      <input id="gbNaam" maxlength="60" autocomplete="off">
+      <div class="twee">
+        <div>
+          <label for="gbGebruiker">Gebruikersnaam</label>
+          <input id="gbGebruiker" maxlength="30" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="bv. piet.smit">
+        </div>
+        <div>
+          <label for="gbRol">Rol</label>
+          <select id="gbRol">
+            <option value="normaal">Gebruiker</option>
+            <option value="admin">Administrateur</option>
+          </select>
+        </div>
+      </div>
+      <p class="wenk">Gebruikersnaam: 3–30 karakters, letters, syfers, punt, koppelteken of onderstreep.</p>
+      <div class="knoppe">
+        <button id="gbStoor" type="submit">Stoor</button>
+        <button id="gbKanselleer" class="tweede" type="button">Kanselleer</button>
+      </div>
+      <div id="gbFout" class="boodskap"></div>
+    </form>
+
+    <div id="gbKopieerVak" class="kopieervak" hidden>
+      <p><strong>Stuur hierdie boodskap aan die gebruiker.</strong> Die tydelike wagwoord word nie gestoor nie.</p>
+      <textarea id="gbKopieerTeks" readonly></textarea>
+      <div class="knoppe">
+        <button id="gbKopieer" type="button">Kopieer alles</button>
+        <button id="gbKopieerToe" class="tweede" type="button">Klaar</button>
+      </div>
+      <div id="gbKopieerMelding" class="boodskap"></div>
+    </div>
+
+    <div class="werkbalk">
+      <span id="gebruikersTelling" class="wenk"></span>
+      <label><input id="gebruikersWysAf" type="checkbox"> Wys onaktiewe</label>
+    </div>
+    <div id="gebruikersLys"></div>
+  </section>
+
+  <!-- ============ SKANDEER ============ -->
+  <section id="skandeerSkerm" hidden>
+    <h1>Skandeer</h1>
+    <p class="sub">Rig die kamera op ’n QR-kode of strepieskode</p>
+    <div id="leser"></div>
+    <div id="skandeerBoodskap" class="boodskap"></div>
+
+    <div class="tussen">of tik / gebruik ’n handskandeerder</div>
+    <form id="handVorm" class="handvorm" novalidate>
+      <input id="handKode" placeholder="Kode" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Kode">
+      <button type="submit">Soek</button>
+    </form>
+
+    <div id="resultaat" class="resultaat" hidden></div>
+
+    <div class="knoppe">
+      <button id="weerKnop" type="button" hidden>Skandeer weer</button>
+      <button id="terugKnop" class="tweede" type="button">Terug</button>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  // Web App-URL van die Apps Script in "InvenTrack Admin" (eindig op /exec)
+  const API_URL = 'https://script.google.com/macros/s/AKfycbz7IaFWThR1xUceGU55njejU0esQAwKSDqdB76jgVAN0Dxq44BlQe3gP-hb-e2iTmjX/exec';
+
+  const $ = id => document.getElementById(id);
+  const stoor = {
+    kry(k)    { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    stel(k, v){ try { localStorage.setItem(k, v); } catch (e) {} },
+    vee(k)    { try { localStorage.removeItem(k); } catch (e) {} }
+  };
+  const ROL_NAME = { super: 'Eienaar', admin: 'Administrateur', normaal: 'Gebruiker' };
+  const SKERMS = ['aanmeldSkerm', 'wagwoordSkerm', 'opstelSkerm', 'tuisSkerm', 'skandeerSkerm',
+                  'lokaleSkerm', 'kategorieSkerm', 'gebruikersSkerm'];
+  let sessie = null;
+
+  // ================= HULPMIDDELS =================
+  async function api(aksie, data = {}) {
+    // text/plain voorkom ’n CORS-voorafversoek, wat Apps Script nie ondersteun nie
+    const r = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ aksie, token: stoor.kry('voorraad_token'), ...data })
+    });
+    if (!r.ok) throw new Error('Kon nie die bediener bereik nie (' + r.status + ').');
+    const antw = await r.json();
+    if (antw && antw.uit) meldUit(antw.fout);
+    return antw;
+  }
+
+  function wysBoodskap(el, teks, soort = 'fout') { el.textContent = teks; el.className = 'boodskap ' + soort; }
+  function versteekBoodskap(el) { el.textContent = ''; el.className = 'boodskap'; }
+  function wysSkerm(id) { SKERMS.forEach(s => { $(s).hidden = s !== id; }); window.scrollTo(0, 0); }
+
+  function besig(knop, aan, teks) {
+    knop.disabled = aan;
+    if (aan) { knop.dataset.oud = knop.textContent; knop.textContent = teks || 'Besig…'; }
+    else if (knop.dataset.oud) { knop.textContent = knop.dataset.oud; }
+  }
+
+  // ================= ROETERING =================
+  // Besluit watter skerm volgende kom ná aanmelding of ’n stap
+  function gaanNa(s) {
+    sessie = s;
+    if (s.moetVerander) return wysWagwoord();
+    if (s.rol === 'admin' && !s.naamBevestig) return wysOpstel();
+    wysTuis();
+  }
+
+  function meldUit(boodskap) {
+    stopKamera();
+    stoor.vee('voorraad_token');
+    sessie = null;
+    document.querySelector('.kaart').classList.remove('wyd');
+    $('wagwoord').value = '';
+    wysSkerm('aanmeldSkerm');
+    if (boodskap) wysBoodskap($('aanmeldBoodskap'), boodskap, 'waarsku');
+  }
+
+  // ================= AANMELD =================
+  $('aanmeldVorm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const kode = $('kode').value.trim().toUpperCase();
+    const gebruiker = $('gebruiker').value.trim();
+    const wagwoord = $('wagwoord').value;
+    const boodskap = $('aanmeldBoodskap');
+    if (!kode || !gebruiker || !wagwoord) return wysBoodskap(boodskap, 'Vul al drie velde in.');
+
+    const knop = $('aanmeldKnop');
+    besig(knop, true);
+    versteekBoodskap(boodskap);
+    try {
+      const r = await api('aanmeld', { kode, gebruiker, wagwoord });
+      if (!r.ok) return wysBoodskap(boodskap, r.fout);
+      stoor.stel('voorraad_token', r.token);
+      stoor.stel('voorraad_kode', kode);
+      // Die tydelike wagwoord is reeds bekend, so vul dit vooraf in vir die volgende stap
+      $('huidigeWW').value = r.sessie.moetVerander ? wagwoord : '';
+      $('wagwoord').value = '';
+      gaanNa(r.sessie);
+    } catch (err) {
+      wysBoodskap(boodskap, err.message);
+    } finally {
+      besig(knop, false);
+    }
+  });
+
+  document.querySelectorAll('.afmeld').forEach(knop => knop.addEventListener('click', async () => {
+    const token = stoor.kry('voorraad_token');
+    meldUit();
+    try { if (token) await api('afmeld', { token }); } catch (e) {}
+  }));
+
+  // ================= NUWE WAGWOORD =================
+  function wysWagwoord() {
+    // Admins het ’n tweede stap (opstelling); gewone gebruikers net hierdie een
+    const tweeStappe = sessie.rol === 'admin' && !sessie.naamBevestig;
+    $('wagwoordStappe').hidden = !tweeStappe;
+    $('nuweWW').value = '';
+    $('bevestigWW').value = '';
+    versteekBoodskap($('wagwoordBoodskap'));
+    wysSkerm('wagwoordSkerm');
+    ($('huidigeWW').value ? $('nuweWW') : $('huidigeWW')).focus();
+  }
+
+  $('wagwoordVorm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const huidige = $('huidigeWW').value;
+    const nuwe = $('nuweWW').value;
+    const boodskap = $('wagwoordBoodskap');
+
+    if (!huidige) return wysBoodskap(boodskap, 'Tik jou tydelike wagwoord.');
+    if (nuwe.length < 8) return wysBoodskap(boodskap, 'Die nuwe wagwoord moet minstens 8 karakters hê.');
+    if (!/[A-Za-z]/.test(nuwe) || !/[0-9]/.test(nuwe)) return wysBoodskap(boodskap, 'Gebruik letters én syfers.');
+    if (nuwe !== $('bevestigWW').value) return wysBoodskap(boodskap, 'Die twee nuwe wagwoorde is nie dieselfde nie.');
+    if (nuwe === huidige) return wysBoodskap(boodskap, 'Kies ’n ander wagwoord as die tydelike een.');
+
+    const knop = $('wagwoordKnop');
+    besig(knop, true);
+    versteekBoodskap(boodskap);
+    try {
+      const r = await api('veranderWagwoord', { huidige, nuwe });
+      if (!r.ok) return wysBoodskap(boodskap, r.fout);
+      $('huidigeWW').value = '';
+      $('nuweWW').value = '';
+      $('bevestigWW').value = '';
+      gaanNa(r.sessie);
+    } catch (err) {
+      wysBoodskap(boodskap, err.message);
+    } finally {
+      besig(knop, false);
+    }
+  });
+
+  // ================= BESIGHEID OPSTEL =================
+  let gekoseLogo = null;
+
+  function wysOpstel() {
+    $('besNaam').value = sessie.besigheidNaam || '';
+    $('adminNaam').value = sessie.naam && sessie.naam !== 'Administrateur' ? sessie.naam : '';
+    versteekBoodskap($('opstelBoodskap'));
+    wysSkerm('opstelSkerm');
+    $('besNaam').focus();
+  }
+
+  /** Lees die prent, verklein dit tot hoogstens 600 px en gee ’n data-URL terug. */
+  function verwerkLogo(leer) {
+    return new Promise((klaar, misluk) => {
+      if (!/^image\/(png|jpeg)$/.test(leer.type)) return misluk(new Error('Kies ’n PNG- of JPG-prent.'));
+      if (leer.size > 15 * 1024 * 1024) return misluk(new Error('Die prent is te groot (maks 15 MB).'));
+      const url = URL.createObjectURL(leer);
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const skaal = Math.min(1, 600 / Math.max(img.width, img.height));
+        const doek = document.createElement('canvas');
+        doek.width = Math.round(img.width * skaal);
+        doek.height = Math.round(img.height * skaal);
+        const ctx = doek.getContext('2d');
+        ctx.drawImage(img, 0, 0, doek.width, doek.height);
+        let data = leer.type === 'image/png' ? doek.toDataURL('image/png') : doek.toDataURL('image/jpeg', 0.9);
+        // Te groot? Skakel om na JPG op ’n wit agtergrond
+        if (data.length > 900000) {
+          ctx.globalCompositeOperation = 'destination-over';
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, doek.width, doek.height);
+          data = doek.toDataURL('image/jpeg', 0.85);
+        }
+        if (data.length > 900000) return misluk(new Error('Die logo is steeds te groot. Probeer ’n kleiner prent.'));
+        klaar(data);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); misluk(new Error('Kon nie die prent lees nie.')); };
+      img.src = url;
+    });
+  }
+
+  $('logoLeer').addEventListener('change', async () => {
+    const leer = $('logoLeer').files[0];
+    if (!leer) return;
+    versteekBoodskap($('opstelBoodskap'));
+    try {
+      gekoseLogo = await verwerkLogo(leer);
+      $('logoVoorskou').src = gekoseLogo;
+      $('logoVoorskou').hidden = false;
+      $('logoTeks').hidden = true;
+    } catch (err) {
+      gekoseLogo = null;
+      $('logoVoorskou').hidden = true;
+      $('logoTeks').hidden = false;
+      wysBoodskap($('opstelBoodskap'), err.message);
+    }
+  });
+
+  $('opstelVorm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const besigheidNaam = $('besNaam').value.trim();
+    const adminNaam = $('adminNaam').value.trim();
+    const boodskap = $('opstelBoodskap');
+    if (besigheidNaam.length < 2) return wysBoodskap(boodskap, 'Vul die besigheidsnaam in.');
+    if (adminNaam.length < 2) return wysBoodskap(boodskap, 'Vul jou volle naam in.');
+    if (!gekoseLogo && !sessie.logoID) return wysBoodskap(boodskap, 'Kies asseblief ’n logo.');
+
+    const knop = $('opstelKnop');
+    besig(knop, true, 'Stoor…');
+    versteekBoodskap(boodskap);
+    try {
+      const r = await api('opstelBesigheid', { besigheidNaam, adminNaam, logo: gekoseLogo });
+      if (!r.ok) return wysBoodskap(boodskap, r.fout);
+      if (gekoseLogo) stoor.stel('voorraad_logo', JSON.stringify({ id: r.sessie.logoID, data: gekoseLogo }));
+      gekoseLogo = null;
+      gaanNa(r.sessie);
+      wysBoodskap($('tuisBoodskap'), 'Opstelling voltooi. Volgende: stel lokale, kategorieë en gebruikers op met die knoppies hieronder.', 'sukses');
+    } catch (err) {
+      wysBoodskap(boodskap, err.message);
+    } finally {
+      besig(knop, false);
+    }
+  });
+
+  // ================= TUIS =================
+  function wysTuis() {
+    $('welkom').textContent = 'Welkom, ' + sessie.naam;
+    $('besigheidNaam').textContent = sessie.besigheidNaam;
+    $('rol').textContent = ROL_NAME[sessie.rol] || sessie.rol;
+    $('tuisKode').textContent = sessie.kode;
+    const isSuper = sessie.rol === 'super';
+    $('skandeerKnop').hidden = isSuper;
+    $('superPaneel').hidden = !isSuper;
+    $('adminMenu').hidden = sessie.rol !== 'admin';
+    document.querySelector('.kaart').classList.toggle('wyd', isSuper);
+    versteekBoodskap($('tuisBoodskap'));
+    wysSkerm('tuisSkerm');
+    wysLogo();
+    if (isSuper) laaiBesighede();
+  }
+
+  // ================= ADMIN: GEDEELDE HULPMIDDELS =================
+  let basis = null;
+  const TIPE_VOLGORDE = { Terrein: 0, Gebou: 1, Lokaal: 2, Stoorkamer: 3 };
+  const volgens = (a, b) => String(a.Naam).localeCompare(String(b.Naam), 'af', { numeric: true, sensitivity: 'base' });
+  const vind = (lys, id) => id ? lys.find(x => x.ID === id) : undefined;
+  const naamVan = (lys, id) => (vind(lys, id) || {}).Naam || '';
+  const isLokaalTipe = t => t === 'Lokaal' || t === 'Stoorkamer';
+
+  /** Vul ’n keuselys. opsies: [{waarde, teks}] of [{groep, opsies: [...]}] */
+  function vulKeuse(sel, opsies, gekies) {
+    sel.textContent = '';
+    opsies.forEach(o => {
+      if (o.groep) {
+        if (!o.opsies.length) return;
+        const g = document.createElement('optgroup');
+        g.label = o.groep;
+        o.opsies.forEach(x => g.appendChild(new Option(x.teks, x.waarde)));
+        sel.appendChild(g);
+      } else {
+        sel.appendChild(new Option(o.teks, o.waarde));
+      }
+    });
+    sel.value = gekies || '';
+    if (sel.value !== (gekies || '')) sel.value = '';
+  }
+
+  function knop(teks, klas, fn) {
+    const b = maak('button', 'klein ' + (klas || 'tweede'), teks);
+    b.type = 'button';
+    b.addEventListener('click', async () => {
+      besig(b, true, '…');
+      try { await fn(); } finally { if (b.isConnected) besig(b, false); }
+    });
+    return b;
+  }
+
+  /** Roep ’n admin-aksie; werk die basisdata by en wys boodskappe. Gee null terug by ’n fout. */
+  async function admAksie(aksie, data, boodskapEl, sukses) {
+    versteekBoodskap(boodskapEl);
+    try {
+      const r = await api(aksie, data);
+      if (!r.ok) { wysBoodskap(boodskapEl, r.fout); return null; }
+      if (r.basis) basis = r.basis;
+      if (r.sessie) sessie = r.sessie;
+      if (r.waarskuwing) wysBoodskap(boodskapEl, r.waarskuwing, 'waarsku');
+      else if (sukses) wysBoodskap(boodskapEl, sukses, 'sukses');
+      return r;
+    } catch (err) {
+      wysBoodskap(boodskapEl, err.message);
+      return null;
+    }
+  }
+
+  async function maakAdminSkermOop(skerm, lysId, boodskapEl, vormId, teken) {
+    wysSkerm(skerm);
+    document.querySelector('.kaart').classList.add('wyd');
+    versteekBoodskap(boodskapEl);
+    $(vormId).hidden = true;
+    const lys = $(lysId);
+    lys.textContent = '';
+    lys.appendChild(maak('p', 'leeg', 'Laai…'));
+    try {
+      const r = await api('basis');
+      if (!r.ok) { lys.textContent = ''; return wysBoodskap(boodskapEl, r.fout); }
+      basis = r.basis;
+      teken();
+    } catch (err) {
+      lys.textContent = '';
+      wysBoodskap(boodskapEl, err.message);
+    }
+  }
+
+  async function kopieerTeks(teksEl, meldEl) {
+    teksEl.focus();
+    teksEl.select();
+    let gelukt = false;
+    try { await navigator.clipboard.writeText(teksEl.value); gelukt = true; }
+    catch (e) { try { gelukt = document.execCommand('copy'); } catch (e2) {} }
+    wysBoodskap(meldEl, gelukt ? 'Gekopieer! Plak dit in WhatsApp of ’n e-pos.'
+                               : 'Die teks is gemerk. Druk Ctrl+C (of hou in en kies Kopieer).', gelukt ? 'sukses' : 'waarsku');
+  }
+
+  function rigVorm(vormId, eersteVeld) {
+    const v = $(vormId);
+    v.hidden = false;
+    try { v.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) {}
+    $(eersteVeld).focus();
+  }
+
+  document.querySelectorAll('.terug').forEach(b => b.addEventListener('click', () => wysTuis()));
+
+  // ================= LOKALE =================
+  let lkWysig = null;
+
+  $('lokaleKnop').addEventListener('click', () =>
+    maakAdminSkermOop('lokaleSkerm', 'lokaleLys', $('lokaleBoodskap'), 'lkVorm', tekenLokale));
+  $('lokaleWysAf').addEventListener('change', () => tekenLokale());
+
+  function tekenLokale() {
+    const lys = $('lokaleLys');
+    lys.textContent = '';
+    const tel = (t, een, meer) => {
+      const n = basis.lokale.filter(l => l.Aktief && l.Tipe === t).length;
+      return n + ' ' + (n === 1 ? een : meer);
+    };
+    $('lokaleTelling').textContent = [tel('Lokaal', 'lokaal', 'lokale'), tel('Stoorkamer', 'stoorkamer', 'stoorkamers'),
+      tel('Gebou', 'gebou', 'geboue'), tel('Terrein', 'terrein', 'terreine')].join(' · ');
+
+    const sigbaar = basis.lokale.filter(l => $('lokaleWysAf').checked || l.Aktief);
+    const ids = new Set(sigbaar.map(l => l.ID));
+    const sorteer = (a, b) => (TIPE_VOLGORDE[a.Tipe] - TIPE_VOLGORDE[b.Tipe]) || volgens(a, b);
+    const wortels = sigbaar.filter(l => !l.OuerID || !ids.has(l.OuerID)).sort(sorteer);
+
+    if (!wortels.length) {
+      lys.appendChild(maak('p', 'leeg', 'Nog geen lokale nie. Druk “+ Nuwe”. Wenk: begin met die terrein en geboue, sodat verslae per gebou en terrein kan optel.'));
+      return;
+    }
+    const teken = (l, houer) => {
+      houer.appendChild(lokaalRy(l));
+      const kinders = sigbaar.filter(x => x.OuerID === l.ID).sort(sorteer);
+      if (kinders.length) {
+        const sub = maak('div', 'ingekeep');
+        kinders.forEach(k => teken(k, sub));
+        houer.appendChild(sub);
+      }
+    };
+    wortels.forEach(w => teken(w, lys));
+  }
+
+  function lokaalRy(l) {
+    const ry = maak('div', 'item' + (l.Aktief ? '' : ' af'));
+    const teks = maak('div', 'teks');
+    const naam = maak('div', 'naam', l.Naam);
+    naam.appendChild(maak('span', 'merk', l.Tipe));
+    if (!l.Aktief) naam.appendChild(maak('span', 'merk af', 'Onaktief'));
+    teks.appendChild(naam);
+
+    if (isLokaalTipe(l.Tipe)) {
+      const hoof = vind(basis.gebruikers, l.HoofID);
+      const kontr = vind(basis.gebruikers, l.KontroleerderID);
+      const wie = g => g ? g.Naam + (g.Aktief ? '' : ' (onaktief)') : 'nog nie gekies nie';
+      const let_ = g => (!g || !g.Aktief) && l.Aktief ? ' let' : '';
+      teks.appendChild(maak('div', 'fyn' + let_(hoof), 'Hoof: ' + wie(hoof)));
+      teks.appendChild(maak('div', 'fyn' + let_(kontr), 'Kontroleerder: ' + wie(kontr)));
+    }
+
+    const aksies = maak('div', 'aksies');
+    if (l.Aktief) aksies.appendChild(knop('Wysig', 'tweede', () => lokaalVorm(l)));
+    aksies.appendChild(knop(l.Aktief ? 'Deaktiveer' : 'Aktiveer', 'tweede', async () => {
+      await admAksie('stelLokaalAktief', { id: l.ID, aktief: !l.Aktief }, $('lokaleBoodskap'),
+        l.Naam + (l.Aktief ? ' is gedeaktiveer.' : ' is weer aktief.'));
+      tekenLokale();
+    }));
+    ry.append(teks, aksies);
+    return ry;
+  }
+
+  function lokaalVorm(l, behou) {
+    lkWysig = l || null;
+    $('lkTitel').textContent = l ? 'Wysig ' + l.Naam : 'Nuwe lokaal';
+    $('lkNaam').value = l ? l.Naam : '';
+    if (l) $('lkTipe').value = l.Tipe;
+    else if (!behou) $('lkTipe').value = 'Lokaal';
+    vulLokaalKeuses(l ? l.OuerID : (behou ? $('lkOuer').value : ''),
+                    l ? l.HoofID : '', l ? l.KontroleerderID : '');
+    versteekBoodskap($('lkFout'));
+    rigVorm('lkVorm', 'lkNaam');
+  }
+
+  function vulLokaalKeuses(ouer, hoof, kontr) {
+    const tipe = $('lkTipe').value;
+    const self = lkWysig ? lkWysig.ID : '';
+    const aktief = basis.lokale.filter(x => x.Aktief && x.ID !== self);
+    const terreine = aktief.filter(x => x.Tipe === 'Terrein').sort(volgens).map(t => ({ waarde: t.ID, teks: t.Naam }));
+    const geboue = aktief.filter(x => x.Tipe === 'Gebou').sort(volgens)
+      .map(g => ({ waarde: g.ID, teks: g.Naam + (g.OuerID ? ' (' + naamVan(basis.lokale, g.OuerID) + ')' : '') }));
+
+    $('lkOuerVak').hidden = tipe === 'Terrein';
+    if (tipe === 'Gebou') {
+      vulKeuse($('lkOuer'), [{ waarde: '', teks: '— Geen terrein —' }].concat(terreine), ouer);
+    } else if (tipe !== 'Terrein') {
+      vulKeuse($('lkOuer'), [
+        { waarde: '', teks: '— Nie in ’n gebou of terrein nie —' },
+        { groep: 'Geboue', opsies: geboue },
+        { groep: 'Terreine', opsies: terreine }
+      ], ouer);
+    }
+
+    $('lkMenseVak').hidden = !isLokaalTipe(tipe);
+    if (isLokaalTipe(tipe)) {
+      const mense = [{ waarde: '', teks: '— Nog nie gekies nie —' }].concat(
+        basis.gebruikers.filter(g => g.Aktief).sort(volgens).map(g => ({ waarde: g.ID, teks: g.Naam })));
+      vulKeuse($('lkHoof'), mense, hoof);
+      vulKeuse($('lkKontr'), mense, kontr);
+    }
+    werkOuerWenkBy();
+  }
+
+  function werkOuerWenkBy() {
+    const tipe = $('lkTipe').value;
+    const ouer = vind(basis.lokale, $('lkOuer').value);
+    const daarIsGeboue = basis.lokale.some(x => x.Aktief && x.Tipe === 'Gebou');
+    let wenk = '';
+    if (isLokaalTipe(tipe)) {
+      if (!ouer) wenk = 'Aanbeveel: kies die gebou (of terrein) waarin dit is, sodat verslae kan optel.';
+      else if (ouer.Tipe === 'Terrein' && daarIsGeboue) wenk = 'Mag direk op die terrein wees, maar ’n gebou word aanbeveel as daar een is.';
+    } else if (tipe === 'Gebou' && !ouer) {
+      wenk = 'Kies die terrein waarop die gebou staan, as daar een is.';
+    }
+    $('lkOuerWenk').textContent = wenk;
+  }
+
+  $('lkNuweKnop').addEventListener('click', () => lokaalVorm(null));
+  $('lkKanselleer').addEventListener('click', () => { $('lkVorm').hidden = true; });
+  $('lkTipe').addEventListener('change', () => vulLokaalKeuses($('lkOuer').value, $('lkHoof').value, $('lkKontr').value));
+  $('lkOuer').addEventListener('change', werkOuerWenkBy);
+
+  $('lkVorm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const tipe = $('lkTipe').value;
+    const data = {
+      Naam: $('lkNaam').value.trim(),
+      Tipe: tipe,
+      OuerID: tipe === 'Terrein' ? '' : $('lkOuer').value,
+      HoofID: isLokaalTipe(tipe) ? $('lkHoof').value : '',
+      KontroleerderID: isLokaalTipe(tipe) ? $('lkKontr').value : ''
+    };
+    if (lkWysig) data.ID = lkWysig.ID;
+    if (!data.Naam) return wysBoodskap($('lkFout'), 'Vul die naam in.');
+    if (data.HoofID && data.HoofID === data.KontroleerderID) {
+      return wysBoodskap($('lkFout'), 'Die hoof en die kontroleerder moet twee verskillende mense wees.');
+    }
+    besig($('lkStoor'), true, 'Stoor…');
+    const r = await admAksie('stoorLokaal', { lokaal: data }, $('lkFout'));
+    besig($('lkStoor'), false);
+    if (!r) return;
+    tekenLokale();
+    if (lkWysig) {
+      $('lkVorm').hidden = true;
+      wysBoodskap($('lokaleBoodskap'), data.Naam + ' is gestoor.', 'sukses');
+    } else {
+      // Hou die vorm oop met dieselfde tipe en plek, sodat jy vinnig nog lokale kan byvoeg
+      lokaalVorm(null, true);
+      wysBoodskap($('lkFout'), data.Naam + ' is bygevoeg. Voeg nog een by, of druk Kanselleer.', 'sukses');
+    }
+  });
+
+  // ================= KATEGORIEË =================
+  let ktWysig = null;
+
+  $('kategorieKnop').addEventListener('click', () =>
+    maakAdminSkermOop('kategorieSkerm', 'kategorieLys', $('kategorieBoodskap'), 'ktVorm', tekenKategorieë));
+  $('kategorieWysAf').addEventListener('change', () => tekenKategorieë());
+
+  function tekenKategorieë() {
+    const lys = $('kategorieLys');
+    lys.textContent = '';
+    const aktief = basis.kategorieë.filter(k => k.Aktief);
+    const nh = aktief.filter(k => !k.OuerID).length, ns = aktief.filter(k => k.OuerID).length;
+    $('kategorieTelling').textContent = nh + (nh === 1 ? ' hoofkategorie · ' : ' hoofkategorieë · ') +
+      ns + (ns === 1 ? ' subkategorie' : ' subkategorieë');
+
+    const sigbaar = basis.kategorieë.filter(k => $('kategorieWysAf').checked || k.Aktief);
+    if (!sigbaar.length) {
+      lys.appendChild(maak('p', 'leeg', 'Nog geen kategorieë nie. Druk “+ Nuwe” om te begin, bv. Meubels (bate) of Skryfbehoeftes (verbruikbaar).'));
+      return;
+    }
+    [['Bate', 'Bates'], ['Verbruikbaar', 'Verbruikbare items']].forEach(([soort, titel]) => {
+      lys.appendChild(maak('div', 'groepkop', titel));
+      const hoof = sigbaar.filter(k => !k.OuerID && k.Soort === soort).sort(volgens);
+      if (!hoof.length) lys.appendChild(maak('p', 'leeg', 'Nog niks nie.'));
+      hoof.forEach(k => {
+        lys.appendChild(kategorieRy(k));
+        const subs = sigbaar.filter(s => s.OuerID === k.ID).sort(volgens);
+        if (subs.length) {
+          const sub = maak('div', 'ingekeep');
+          subs.forEach(s => sub.appendChild(kategorieRy(s)));
+          lys.appendChild(sub);
+        }
+      });
+    });
+  }
+
+  function kategorieRy(k) {
+    const ry = maak('div', 'item' + (k.Aktief ? '' : ' af'));
+    const teks = maak('div', 'teks');
+    const naam = maak('div', 'naam', k.Naam);
+    if (!k.Aktief) naam.appendChild(maak('span', 'merk af', 'Onaktief'));
+    teks.appendChild(naam);
+    if (!k.OuerID) {
+      const n = basis.kategorieë.filter(s => s.OuerID === k.ID && s.Aktief).length;
+      teks.appendChild(maak('div', 'fyn', n === 1 ? '1 subkategorie' : n + ' subkategorieë'));
+    }
+    const aksies = maak('div', 'aksies');
+    if (k.Aktief) {
+      if (!k.OuerID) aksies.appendChild(knop('+ Sub', 'tweede', () => kategorieVorm(null, k.ID)));
+      aksies.appendChild(knop('Wysig', 'tweede', () => kategorieVorm(k)));
+    }
+    aksies.appendChild(knop(k.Aktief ? 'Deaktiveer' : 'Aktiveer', 'tweede', async () => {
+      await admAksie('stelKategorieAktief', { id: k.ID, aktief: !k.Aktief }, $('kategorieBoodskap'),
+        k.Naam + (k.Aktief ? ' is gedeaktiveer.' : ' is weer aktief.'));
+      tekenKategorieë();
+    }));
+    ry.append(teks, aksies);
+    return ry;
+  }
+
+  function kategorieVorm(k, ouerID) {
+    ktWysig = k || null;
+    $('ktTitel').textContent = k ? 'Wysig ' + k.Naam : (ouerID ? 'Nuwe subkategorie' : 'Nuwe kategorie');
+    $('ktNaam').value = k ? k.Naam : '';
+    const hetSubs = !!k && basis.kategorieë.some(s => s.OuerID === k.ID);
+    const hoof = basis.kategorieë.filter(x => x.Aktief && !x.OuerID && (!k || x.ID !== k.ID)).sort(volgens);
+    const opsie = x => ({ waarde: x.ID, teks: x.Naam });
+    vulKeuse($('ktOuer'), [
+      { waarde: '', teks: '— Geen (dit is ’n hoofkategorie) —' },
+      { groep: 'Bates', opsies: hoof.filter(x => x.Soort === 'Bate').map(opsie) },
+      { groep: 'Verbruikbare items', opsies: hoof.filter(x => x.Soort === 'Verbruikbaar').map(opsie) }
+    ], k ? k.OuerID : (ouerID || ''));
+    $('ktOuer').disabled = hetSubs;
+    $('ktSoort').value = k ? k.Soort : ($('ktSoort').value || '');
+    werkSoortBy(hetSubs);
+    versteekBoodskap($('ktFout'));
+    rigVorm('ktVorm', 'ktNaam');
+  }
+
+  function werkSoortBy(hetSubs) {
+    const ouer = vind(basis.kategorieë, $('ktOuer').value);
+    $('ktSoortVak').hidden = !!ouer;
+    if (ouer) {
+      $('ktSoort').value = ouer.Soort;
+      $('ktOuerWenk').textContent = 'Subkategorie: erf die soort van “' + ouer.Naam + '” (' +
+        (ouer.Soort === 'Bate' ? 'bates' : 'verbruikbare items') + ').';
+    } else {
+      $('ktOuerWenk').textContent = hetSubs
+        ? 'Hierdie kategorie het subkategorieë, so dit bly ’n hoofkategorie.'
+        : 'Kies ’n hoofkategorie om dit ’n subkategorie te maak.';
+    }
+  }
+
+  $('ktNuweKnop').addEventListener('click', () => { $('ktSoort').value = ''; kategorieVorm(null); });
+  $('ktKanselleer').addEventListener('click', () => { $('ktVorm').hidden = true; });
+  $('ktOuer').addEventListener('change', () => werkSoortBy(false));
+
+  $('ktVorm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const data = { Naam: $('ktNaam').value.trim(), OuerID: $('ktOuer').value, Soort: $('ktSoort').value };
+    if (ktWysig) data.ID = ktWysig.ID;
+    if (!data.Naam) return wysBoodskap($('ktFout'), 'Vul die naam in.');
+    if (!data.OuerID && !data.Soort) return wysBoodskap($('ktFout'), 'Kies of dit bates of verbruikbare items is.');
+    besig($('ktStoor'), true, 'Stoor…');
+    const r = await admAksie('stoorKategorie', { kategorie: data }, $('ktFout'));
+    besig($('ktStoor'), false);
+    if (!r) return;
+    tekenKategorieë();
+    if (ktWysig) {
+      $('ktVorm').hidden = true;
+      wysBoodskap($('kategorieBoodskap'), data.Naam + ' is gestoor.', 'sukses');
+    } else {
+      kategorieVorm(null, data.OuerID);
+      wysBoodskap($('ktFout'), data.Naam + ' is bygevoeg. Voeg nog een by, of druk Kanselleer.', 'sukses');
+    }
+  });
+
+  // ================= GEBRUIKERS =================
+  let gbWysig = null;
+
+  $('gebruikersKnop').addEventListener('click', () => {
+    $('gbKopieerVak').hidden = true;
+    maakAdminSkermOop('gebruikersSkerm', 'gebruikersLys', $('gebruikersBoodskap'), 'gbVorm', tekenGebruikers);
+  });
+  $('gebruikersWysAf').addEventListener('change', () => tekenGebruikers());
+
+  function tekenGebruikers() {
+    const lys = $('gebruikersLys');
+    lys.textContent = '';
+    const aktief = basis.gebruikers.filter(g => g.Aktief);
+    const admins = aktief.filter(g => g.Rol === 'admin').length;
+    $('gebruikersTelling').textContent = aktief.length + (aktief.length === 1 ? ' aktiewe gebruiker · ' : ' aktiewe gebruikers · ') +
+      admins + (admins === 1 ? ' admin' : ' admins');
+
+    basis.gebruikers
+      .filter(g => $('gebruikersWysAf').checked || g.Aktief)
+      .sort(volgens)
+      .forEach(g => lys.appendChild(gebruikerRy(g)));
+  }
+
+  function gebruikerRy(g) {
+    const ek = g.ID === sessie.gebruikerID;
+    const ry = maak('div', 'item' + (g.Aktief ? '' : ' af'));
+    const teks = maak('div', 'teks');
+    const naam = maak('div', 'naam', g.Naam + (ek ? ' (jy)' : ''));
+    if (g.Rol === 'admin') naam.appendChild(maak('span', 'merk hoof', 'Admin'));
+    if (!g.Aktief) naam.appendChild(maak('span', 'merk af', 'Onaktief'));
+    teks.appendChild(naam);
+
+    const status = g.MoetVerander
+      ? (g.LaasteAanmelding ? 'Moet nog ’n eie wagwoord kies' : 'Wag vir eerste aanmelding')
+      : 'Laaste aanmelding: ' + (g.LaasteAanmelding || 'nog nooit');
+    teks.appendChild(maak('div', 'fyn', g.Gebruikersnaam + ' · ' + status));
+
+    const hoofVan = basis.lokale.filter(l => l.Aktief && l.HoofID === g.ID).map(l => l.Naam).sort();
+    const kontrVan = basis.lokale.filter(l => l.Aktief && l.KontroleerderID === g.ID).map(l => l.Naam).sort();
+    const take = [];
+    if (hoofVan.length) take.push('Hoof van ' + hoofVan.join(', '));
+    if (kontrVan.length) take.push('Kontroleerder van ' + kontrVan.join(', '));
+    if (take.length) teks.appendChild(maak('div', 'fyn' + (g.Aktief ? '' : ' let'), take.join(' · ')));
+
+    const aksies = maak('div', 'aksies');
+    if (g.Aktief) aksies.appendChild(knop('Wysig', 'tweede', () => gebruikerVorm(g)));
+    if (g.Aktief && !ek) {
+      aksies.appendChild(knop('Nuwe wagwoord', 'tweede', async () => {
+        if (!confirm('Gee ’n nuwe tydelike wagwoord aan ' + g.Naam + '? Die ou wagwoord sal nie meer werk nie.')) return;
+        const r = await admAksie('herstelWagwoord', { id: g.ID }, $('gebruikersBoodskap'));
+        if (r) { tekenGebruikers(); wysKopieer(r.boodskap); }
+      }));
+    }
+    if (!ek) {
+      aksies.appendChild(knop(g.Aktief ? 'Deaktiveer' : 'Aktiveer', 'tweede', async () => {
+        if (g.Aktief && !confirm(g.Naam + ' sal nie meer kan aanmeld nie. Gaan voort?')) return;
+        await admAksie('stelGebruikerAktief', { id: g.ID, aktief: !g.Aktief }, $('gebruikersBoodskap'),
+          g.Naam + (g.Aktief ? ' is gedeaktiveer.' : ' is weer aktief.'));
+        tekenGebruikers();
+      }));
+    }
+    ry.append(teks, aksies);
+    return ry;
+  }
+
+  function gebruikerVorm(g) {
+    gbWysig = g || null;
+    $('gbKopieerVak').hidden = true;
+    $('gbTitel').textContent = g ? 'Wysig ' + g.Naam : 'Nuwe gebruiker';
+    $('gbNaam').value = g ? g.Naam : '';
+    $('gbGebruiker').value = g ? g.Gebruikersnaam : '';
+    $('gbRol').value = g ? g.Rol : 'normaal';
+    $('gbRol').disabled = !!g && g.ID === sessie.gebruikerID;
+    versteekBoodskap($('gbFout'));
+    rigVorm('gbVorm', 'gbNaam');
+  }
+
+  function wysKopieer(teks) {
+    $('gbVorm').hidden = true;
+    $('gbKopieerTeks').value = teks;
+    versteekBoodskap($('gbKopieerMelding'));
+    $('gbKopieerVak').hidden = false;
+    try { $('gbKopieerVak').scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) {}
+  }
+
+  // Stel ’n gebruikersnaam voor uit die naam, bv. "Piet van der Merwe" → "piet.vandermerwe"
+  $('gbNaam').addEventListener('input', () => {
+    if (gbWysig || $('gbGebruiker').dataset.self === '1') return;
+    const dele = $('gbNaam').value.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9 ]/g, '').trim().split(/\s+/).filter(Boolean);
+    $('gbGebruiker').value = dele.length > 1 ? (dele[0] + '.' + dele.slice(1).join('')).slice(0, 30) : (dele[0] || '');
+  });
+  $('gbGebruiker').addEventListener('input', () => { $('gbGebruiker').dataset.self = $('gbGebruiker').value ? '1' : ''; });
+
+  $('gbNuweKnop').addEventListener('click', () => { $('gbGebruiker').dataset.self = ''; gebruikerVorm(null); });
+  $('gbKanselleer').addEventListener('click', () => { $('gbVorm').hidden = true; });
+  $('gbKopieer').addEventListener('click', () => kopieerTeks($('gbKopieerTeks'), $('gbKopieerMelding')));
+  $('gbKopieerToe').addEventListener('click', () => { $('gbKopieerVak').hidden = true; });
+
+  $('gbVorm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const data = {
+      Naam: $('gbNaam').value.trim(),
+      Gebruikersnaam: $('gbGebruiker').value.trim().toLowerCase(),
+      Rol: $('gbRol').value
+    };
+    if (gbWysig) data.ID = gbWysig.ID;
+    if (!data.Naam) return wysBoodskap($('gbFout'), 'Vul die naam in.');
+    if (!/^[a-z0-9._-]{3,30}$/.test(data.Gebruikersnaam)) {
+      return wysBoodskap($('gbFout'), 'Gebruikersnaam: 3–30 karakters, net letters, syfers, punt, koppelteken of onderstreep.');
+    }
+    besig($('gbStoor'), true, 'Stoor…');
+    const r = await admAksie('stoorGebruiker', { gebruiker: data }, $('gbFout'));
+    besig($('gbStoor'), false);
+    if (!r) return;
+    tekenGebruikers();
+    if (r.boodskap) {
+      $('gbGebruiker').dataset.self = '';
+      wysKopieer(r.boodskap);
+    } else {
+      $('gbVorm').hidden = true;
+      wysBoodskap($('gebruikersBoodskap'), data.Naam + ' is gestoor.', 'sukses');
+    }
+  });
+
+  // ================= EIENAAR-PANEEL =================
+  function maak(tag, klas, teks) {
+    const el = document.createElement(tag);
+    if (klas) el.className = klas;
+    if (teks != null) el.textContent = teks;
+    return el;
+  }
+
+  async function laaiBesighede() {
+    const lys = $('besighedeLys');
+    const boodskap = $('superBoodskap');
+    lys.textContent = '';
+    lys.appendChild(maak('p', 'leeg', 'Laai…'));
+    try {
+      const r = await api('besighede');
+      if (!r.ok) { lys.textContent = ''; return wysBoodskap(boodskap, r.fout); }
+      lys.textContent = '';
+      if (!r.besighede.length) {
+        lys.appendChild(maak('p', 'leeg', 'Nog geen besighede nie. Skep een in die InvenTrack Admin-Sheet.'));
+        return;
+      }
+      r.besighede.forEach(b => lys.appendChild(besigheidKaart(b)));
+    } catch (err) {
+      lys.textContent = '';
+      wysBoodskap(boodskap, err.message);
+    }
+  }
+
+  function besigheidKaart(b) {
+    const kaart = maak('div', 'bes' + (b.aktief ? '' : ' af'));
+
+    const kop = maak('div', 'bes-kop');
+    kop.append(maak('strong', '', b.naam), maak('span', 'status ' + (b.aktief ? 'aan' : 'af'), b.aktief ? 'Aktief' : 'Onaktief'));
+
+    const info = maak('div', 'bes-info',
+      'Kode ' + b.kode + ' · admin ' + b.admin + (b.epos ? ' (' + b.epos + ')' : '') + (b.geskep ? ' · geskep ' + b.geskep : ''));
+
+    const knoppe = maak('div', 'bes-knoppe');
+    const togKnop = maak('button', 'klein' + (b.aktief ? ' tweede' : ''), b.aktief ? 'Maak onaktief' : 'Maak aktief');
+    togKnop.type = 'button';
+    const verwyderKnop = maak('button', 'klein gevaar', 'Verwyder');
+    verwyderKnop.type = 'button';
+    knoppe.append(togKnop, verwyderKnop);
+
+    // Bevestiging vir verwyder: tik die kode
+    const bevestig = maak('div', 'bes-verwyder');
+    bevestig.hidden = true;
+    const uitleg = maak('p', '', 'Die Sheet en logo gaan na jou Google Drive-asblik (30 dae om te herstel). Niemand kan meer aanmeld nie. Tik die kode ' + b.kode + ' om te bevestig:');
+    const vorm = maak('form', 'handvorm');
+    const invoer = maak('input');
+    invoer.inputMode = 'numeric';
+    invoer.autocomplete = 'off';
+    invoer.setAttribute('aria-label', 'Bevestig kode');
+    const finaal = maak('button', 'klein gevaar', 'Verwyder');
+    finaal.type = 'submit';
+    vorm.append(invoer, finaal);
+    bevestig.append(uitleg, vorm);
+
+    kaart.append(kop, info, knoppe, bevestig);
+
+    togKnop.addEventListener('click', async () => {
+      besig(togKnop, true);
+      versteekBoodskap($('superBoodskap'));
+      try {
+        const r = await api('stelAktief', { kode: b.kode, aktief: !b.aktief });
+        if (!r.ok) return wysBoodskap($('superBoodskap'), r.fout);
+        if (r.waarskuwing) wysBoodskap($('superBoodskap'), r.waarskuwing, 'waarsku');
+        else wysBoodskap($('superBoodskap'), b.naam + ' is nou ' + (b.aktief ? 'onaktief.' : 'aktief.'), 'sukses');
+        laaiBesighede();
+      } catch (err) {
+        wysBoodskap($('superBoodskap'), err.message);
+      } finally {
+        besig(togKnop, false);
+      }
+    });
+
+    verwyderKnop.addEventListener('click', () => {
+      bevestig.hidden = !bevestig.hidden;
+      if (!bevestig.hidden) invoer.focus();
+    });
+
+    vorm.addEventListener('submit', async e => {
+      e.preventDefault();
+      if (invoer.value.trim() !== b.kode) {
+        return wysBoodskap($('superBoodskap'), 'Die kode stem nie ooreen nie. Niks is verwyder nie.');
+      }
+      besig(finaal, true);
+      try {
+        const r = await api('verwyderBesigheid', { kode: b.kode, bevestig: invoer.value.trim() });
+        if (!r.ok) return wysBoodskap($('superBoodskap'), r.fout);
+        wysBoodskap($('superBoodskap'), b.naam + ' is verwyder.', 'sukses');
+        laaiBesighede();
+      } catch (err) {
+        wysBoodskap($('superBoodskap'), err.message);
+      } finally {
+        besig(finaal, false);
+      }
+    });
+
+    return kaart;
+  }
+
+  $('herlaaiKnop').addEventListener('click', () => { versteekBoodskap($('superBoodskap')); laaiBesighede(); });
+
+  async function wysLogo() {
+    const img = $('tuisLogo');
+    img.hidden = true;
+    if (!sessie || !sessie.logoID) return;
+    let gestoor = null;
+    try { gestoor = JSON.parse(stoor.kry('voorraad_logo') || 'null'); } catch (e) {}
+    if (!gestoor || gestoor.id !== sessie.logoID) {
+      try {
+        const r = await api('logo');
+        if (!r.ok || !r.logo) return;
+        gestoor = { id: r.logoID, data: r.logo };
+        stoor.stel('voorraad_logo', JSON.stringify(gestoor));
+      } catch (e) { return; }
+    }
+    img.src = gestoor.data;
+    img.alt = sessie.besigheidNaam + ' logo';
+    img.hidden = false;
+  }
+
+  // ================= SKANDEERDER =================
+  // Word in volgorde probeer; as een CDN nie werk nie, probeer ons die volgende
+  const BIBLIOTEEK = [
+    'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js',
+    'https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js',
+    'https://unpkg.com/html5-qrcode@2.3.8/minified/html5-qrcode.min.js'
+  ];
+  let leser = null;
+  let besigMetSoek = false;
+
+  function laaiSkrip(url) {
+    return new Promise((klaar, misluk) => {
+      const s = document.createElement('script');
+      s.src = url;
+      s.onload = klaar;
+      s.onerror = misluk;
+      document.head.appendChild(s);
+    });
+  }
+
+  async function laaiBiblioteek() {
+    for (const url of BIBLIOTEEK) {
+      if (window.Html5Qrcode) return;
+      try { await laaiSkrip(url); } catch (e) {}
+    }
+    if (!window.Html5Qrcode) throw new Error('Kon nie die skandeerder laai nie. Kyk jou internetverbinding.');
+  }
+
+  async function beginKamera() {
+    const boodskap = $('skandeerBoodskap');
+    versteekBoodskap(boodskap);
+    $('leser').hidden = false;
+    try {
+      await laaiBiblioteek();
+      if (!leser) {
+        const F = Html5QrcodeSupportedFormats;
+        leser = new Html5Qrcode('leser', {
+          verbose: false,
+          formatsToSupport: [F.QR_CODE, F.DATA_MATRIX, F.CODE_128, F.CODE_39, F.CODE_93,
+                             F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E, F.ITF, F.CODABAR],
+          experimentalFeatures: { useBarCodeDetectorIfSupported: true }
+        });
+      }
+      await leser.start(
+        { facingMode: 'environment' },
+        {
+          fps: 10,
+          qrbox: (b, h) => ({ width: Math.max(150, Math.floor(b * 0.85)), height: Math.max(100, Math.floor(h * 0.5)) })
+        },
+        kode => kodeGevind(kode),
+        () => {}
+      );
+    } catch (err) {
+      $('leser').hidden = true;
+      const teks = String(err && (err.message || err));
+      if (/permission|notallowed/i.test(teks)) {
+        wysBoodskap(boodskap, 'Toegang tot die kamera is geweier. Gee toestemming in jou blaaier se instellings, of tik die kode hieronder.', 'waarsku');
+      } else if (location.protocol === 'file:') {
+        wysBoodskap(boodskap, 'Die kamera werk net oor https (bv. GitHub Pages), nie as ’n lêer op jou rekenaar nie. Tik die kode hieronder.', 'waarsku');
+      } else {
+        wysBoodskap(boodskap, 'Kon nie die kamera begin nie. Tik die kode hieronder. (' + teks + ')', 'waarsku');
+      }
+    }
+  }
+
+  async function stopKamera() {
+    try { if (leser && leser.isScanning) await leser.stop(); } catch (e) {}
+  }
+
+  async function kodeGevind(kode) {
+    if (besigMetSoek) return;
+    besigMetSoek = true;
+    await stopKamera();
+    $('leser').hidden = true;
+    try { navigator.vibrate && navigator.vibrate(80); } catch (e) {}
+    await soekKode(kode);
+    besigMetSoek = false;
+  }
+
+  async function soekKode(kode) {
+    kode = String(kode || '').trim();
+    if (!kode) return;
+    const res = $('resultaat');
+    res.hidden = false;
+    res.textContent = 'Soek ' + kode + '…';
+    $('weerKnop').hidden = false;
+    try {
+      const r = await api('skandeer', { kode });
+      if (!r.ok) {
+        res.hidden = true;
+        return wysBoodskap($('skandeerBoodskap'), r.fout);
+      }
+      wysResultaat(r);
+    } catch (err) {
+      res.hidden = true;
+      wysBoodskap($('skandeerBoodskap'), err.message);
+    }
+  }
+
+  function wysResultaat(r) {
+    const res = $('resultaat');
+    res.textContent = '';
+    const kop = document.createElement('h2');
+    if (!r.gevind) {
+      kop.textContent = 'Nie gevind nie';
+      const p = document.createElement('p');
+      p.className = 'sub';
+      p.style.margin = '0';
+      p.textContent = 'Kode “' + r.kode + '” is nog nie in die stelsel nie.';
+      res.append(kop, p);
+      return;
+    }
+    const etiket = document.createElement('span');
+    etiket.className = 'etiket';
+    etiket.textContent = r.soort === 'bate' ? 'Bate' : 'Voorraaditem';
+    kop.textContent = r.data.Item || r.kode;
+    res.append(etiket, kop);
+    Object.entries(r.data).forEach(([sleutel, waarde]) => {
+      if (sleutel === 'Item' || waarde === '' || waarde == null) return;
+      const ry = document.createElement('div');
+      ry.className = 'ry';
+      const a = document.createElement('span');
+      const b = document.createElement('span');
+      a.textContent = sleutel;
+      b.textContent = waarde;
+      ry.append(a, b);
+      res.appendChild(ry);
+    });
+  }
+
+  function maakSkoon() {
+    $('resultaat').hidden = true;
+    $('weerKnop').hidden = true;
+    $('handKode').value = '';
+    versteekBoodskap($('skandeerBoodskap'));
+  }
+
+  $('skandeerKnop').addEventListener('click', () => {
+    wysSkerm('skandeerSkerm');
+    maakSkoon();
+    beginKamera();
+  });
+
+  $('weerKnop').addEventListener('click', () => { maakSkoon(); beginKamera(); });
+
+  $('terugKnop').addEventListener('click', async () => {
+    await stopKamera();
+    wysTuis();
+  });
+
+  // Handskandeerders "tik" die kode en druk Enter, so hierdie vorm hanteer hulle ook
+  $('handVorm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const kode = $('handKode').value;
+    if (!kode.trim()) return;
+    await stopKamera();
+    $('leser').hidden = true;
+    versteekBoodskap($('skandeerBoodskap'));
+    await soekKode(kode);
+    $('handKode').value = '';
+    $('handKode').focus();
+  });
+
+  // ================= BEGIN =================
+  (async function begin() {
+    $('kode').value = stoor.kry('voorraad_kode') || '';
+    if (!stoor.kry('voorraad_token')) return;
+    try {
+      const r = await api('ek');
+      if (r.ok) gaanNa(r.sessie);
+    } catch (e) {}
+  })();
+</script>
+</body>
+</html>
